@@ -7,7 +7,7 @@ const commands = [];
 // Grab all the command folders from the commands directory you created earlier
 const foldersPath = path.join(__dirname, 'commands');
 console.log(foldersPath);
-const commandFolders = fs.readdirSync(foldersPath);
+const commandFolders = fs.readdirSync(foldersPath).filter(file => file.endsWith('utility'));
 console.log(commandFolders);
 
 for (const folder of commandFolders) {

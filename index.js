@@ -13,7 +13,7 @@ client.commands = new Collection();
 
 
 const foldersPath = path.join(__dirname, 'commands');
-const commandFolders = fs.readdirSync(foldersPath);
+const commandFolders = fs.readdirSync(foldersPath).filter(file => file.endsWith('utility'));
 
 for (const folder of commandFolders) {
     const commandsPath = path.join(foldersPath, folder);
