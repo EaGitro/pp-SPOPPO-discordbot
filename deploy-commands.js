@@ -1,52 +1,55 @@
-const { REST, Routes } = require('discord.js');
-const { clientId, guildId, token } = require('./config.json');
+// ライブラリ　インポート
 const fs = require('node:fs');
 const path = require('node:path');
+const { REST, Routes } = require('discord.js');
+require('dotenv').config();
 
+// 接続情報(dotenvによるよru.envファイルからの読み込み)
+const token = process.env.DISCORD_TOKEN;
+const clientId = process.env.DISCORD_CLIENTID;
+const guildId = process.env.DISCORD_GUILDID;
+// const { clientId, guildId, token } = require('./config.json');
+console.log(token);
+
+// スラッシュコマンド読み込み
 const commands = [];
-// Grab all the command folders from the commands directory you created earlier
+// フォルダ読み込み
 const foldersPath = path.join(__dirname, 'commands');
-console.log(foldersPath);
 const commandFolders = fs.readdirSync(foldersPath).filter(file => file.endsWith('utility'));
-console.log(commandFolders);
 
 for (const folder of commandFolders) {
-    // Grab all the command files from the commands directory you created earlier
+    // フォルダ内ファイル読み込み
     const commandsPath = path.join(foldersPath, folder);
-    console.log(commandsPath);
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-    console.log(commandFiles);
-    // Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
+    // コマンドファイル内のスラッシュコマンドを取り出し、commandsリストに保管する
     for (const file of commandFiles) {
         const filePath = path.join(commandsPath, file);
-        console.log(filePath);
         const command = require(filePath);
         if ('data' in command && 'execute' in command) {
             commands.push(command.data.toJSON());
         } else {
-            console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+            console.log(`[警告] ${filePath} のコマンドには必要な "data" または "execute" プロパティがありません。`);
         }
     }
 }
-// console.log(commands);
 
-// Construct and prepare an instance of the REST module
+// RESTモジュールの準備
 const rest = new REST().setToken(token);
 
-// and deploy your commands!
+// スラッシュコマンドの登録を実行
 (async () => {
     try {
-        console.log(`Started refreshing ${commands.length} application (/) commands.`);
+        console.log(`${commands.length} つのスラッシュコマンドを登録中です...`);
 
-        // The put method is used to fully refresh all commands in the guild with the current set
+        // commandsリストに保管されたスラッシュコマンドが全て登録される
         const data = await rest.put(
             Routes.applicationGuildCommands(clientId, guildId),
             { body: commands },
         );
 
-        console.log(`Successfully reloaded ${data.length} application (/) commands.`);
+        console.log(`${data.length} 個のスラッシュコマンドを正常に登録しました！`);
     } catch (error) {
-        // And of course, make sure you catch and log any errors!
+        // 登録失敗時のエラーログ
         console.error(error);
     }
 })();
