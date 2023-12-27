@@ -21,12 +21,11 @@
 
 ```.gitignore
 # Dependency directories
-node_modules/
-
-
-# token
-
-/config.json
+node_modules
+config.json
+.env
+test.js
+.DS_Store
 ```
 
 
