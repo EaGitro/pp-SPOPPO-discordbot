@@ -55,7 +55,7 @@ function question_order_list_generator(target_list) {
 // 結果発表の処理
 // 課題：順位の表示、ランキング順に表示
 function result(interaction, client, target_scores) {
-    let safe_list = [];
+    let safe_list = []; // セーフの人達
     let dobon_list = []; // ドボンの人達
     for (let key in target_scores) {
         if (target_scores[key] <= GOAL) { // ゴール値以下
@@ -78,7 +78,7 @@ function game_start(interaction, client, GOAL, target_list, target_scores) {
     let questionOrder = question_order_list_generator(target_list); // 質問順を格納
     let order = 0; // 次に参照する質問順のインデックス
     interaction.followUp({
-        content: `${questionOrder[order].questioner}は${questionOrder[order].responder}に質問してください！\n質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！`
+        content: `${questionOrder[order].questioner}は${questionOrder[order].responder}に質問してください！\n質問者は質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！`
     });
 
     client.on('messageCreate', async message => {
@@ -102,13 +102,13 @@ function game_start(interaction, client, GOAL, target_list, target_scores) {
             } else if (order < target_list.length-1) { // まだ順番が回っていない人がいる時
                 order++;
                 interaction.followUp({
-                    content: `${questionOrder[order].questioner}は${questionOrder[order].responder}に質問してください！\n質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！`
+                    content: `${questionOrder[order].questioner}は${questionOrder[order].responder}に質問してください！\n質問者は質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！\n`
                 });
             } else { // 順番が最後まで到達した時
                 questionOrder = question_order_list_generator(target_list);
                 order = 0;
                 interaction.followUp({
-                    content: `${questionOrder[order].questioner}は${questionOrder[order].responder}に質問してください！\n質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！`
+                    content: `${questionOrder[order].questioner}は${questionOrder[order].responder}に質問してください！\n質問者は質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！`
                 });
             }
         } else if (message.content === 'stop') { // 回答者が回答から離脱(stop)した時
@@ -120,13 +120,13 @@ function game_start(interaction, client, GOAL, target_list, target_scores) {
             } else if (order < target_list.length-1) { // まだ順番が回っていない人がいる時
                 order++;
                 interaction.followUp({
-                    content: `${questionOrder[order].questioner}は${questionOrder[order].responder}に質問してください！\n質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！`
+                    content: `${questionOrder[order].questioner}は${questionOrder[order].responder}に質問してください！\n質問者は質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！`
                 });
             } else { // 順番が最後まで到達した時
                 questionOrder = question_order_list_generator(target_list);
                 order = 0;
                 interaction.followUp({
-                    content: `${questionOrder[order].questioner}は${questionOrder[order].responder}に質問してください！\n質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！`
+                    content: `${questionOrder[order].questioner}は${questionOrder[order].responder}に質問してください！\n質問者は質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！`
                 });
             }
         }
@@ -147,7 +147,7 @@ module.exports = {
 
     async execute(interaction, client) {
         // 参加者を募集する ------------------------------------------------------------------------
-        const target_list = ["Tanaka Kumi", "Kato Ken"];
+        const target_list = []; // 一人でテスト時は"Tanaka Kumi", "Kato Ken"を予め入力
         const target_scores = {};
         GOAL = interaction.options.getInteger("ピッタリゴール");
 
