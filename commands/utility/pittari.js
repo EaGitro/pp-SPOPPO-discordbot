@@ -1,6 +1,18 @@
-const { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ComponentType } = require('discord.js');
-let target_list_copy = [];
-let GOAL = 0;
+const { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ComponentType, EmbedBuilder } = require('discord.js');
+let target_list = []; // 参加者の名前を格納する
+let target_list_copy = []; // 質問者順の決定時に使うため、target_listのコピーを用意しておく
+let target_scores = {}; // 参加者のスコアを格納する
+let GOAL = 0; // ゴール値を格納する
+
+// 文字列を動的に生成する関数
+// 参考：https://qiita.com/YOS0602/items/8eadf8f7743ebdc5946c
+const format = (str, ...args) => {
+    for (const [i, arg] of args.entries()) {
+      const regExp = new RegExp(`\\{${i}\\}`, 'g')
+      str = str.replace(regExp, arg)
+    }
+    return str
+}
 
 // 配列をシャッフルする関数
 function shuffle(array) {
@@ -54,7 +66,7 @@ function question_order_list_generator(target_list) {
 
 // 結果発表の処理
 // 課題：順位の表示、ランキング順に表示
-function result(interaction, client, target_scores) {
+function result(interaction) {
     let safe_list = []; // セーフの人達
     let dobon_list = []; // ドボンの人達
     for (let key in target_scores) {
@@ -69,68 +81,109 @@ function result(interaction, client, target_scores) {
         content: `ゲーム終了！\n結果発表！！！\n\nピッタリランキング：\n${safe_list.join('\n')}\n\nドボンランキング：\n${dobon_list.join('\n')}\n\nお疲れ様でした🐦`
     });
 
-    return client.destroy();
+    return;
+}
+
+// スコアボードの更新関数
+function update_scoreboard() {
+    let fields = [];
+    for (let target_name in target_scores) {
+        fields.push({ name: target_name, value: String(target_scores[target_name]), inline: true })
+    }
+
+    let scores_pre = new EmbedBuilder()
+        .setTitle('Spoppo スコアボード')
+        .setDescription(`現在の参加者のスコアはこちら！(ゴール：${GOAL})`)
+        .addFields(fields)
+
+    return scores_pre;
 }
 
 // ゲーム本編の処理関数 ------------------------------------------------------------------------
-// 課題：ピッタリの時の処理、みんなの得点の表示(embed?)
-function game_start(interaction, client, GOAL, target_list, target_scores) {
+// 課題：みんなの得点の表示(embed?)
+function game_start(interaction) {
     let questionOrder = question_order_list_generator(target_list); // 質問順を格納
     let order = 0; // 次に参照する質問順のインデックス
-    interaction.followUp({
-        content: `${questionOrder[order].questioner}は${questionOrder[order].responder}に質問してください！\n質問者は質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！`
+    let game_message = `\n[ターン]{0}は{1}に質問してください！\n質問者は質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！\n`;
+    let point_message = `\n{0}は{1}ポイント獲得！(現在の得点：{2})\n`
+    let scores = update_scoreboard();
+    
+    const responce_game = interaction.channel.send({
+        content: `---------------------\n[Spoppo ゲーム中]` + format(game_message, questionOrder[order].questioner, questionOrder[order].responder),
+        embeds : [scores]
     });
 
-    client.on('messageCreate', async message => {
+    // メイン処理を開始
+    interaction.client.on('messageCreate', message_func);
+    async function message_func(message) {
         if (isFinite(message.content)) { // 回答者が数値を入力した時に発火  && message.member.displayName === questionOrder[order].questioner
             target_scores[questionOrder[order].questioner] += Number(message.content);
-            await message.channel.send(`${questionOrder[order].questioner}は${message.content}ポイント獲得！(現在の得点：${target_scores[questionOrder[order].questioner]})`);
+            scores = update_scoreboard();
+            let message_list = [`---------------------\n[Spoppo ゲーム中]\n`, format(point_message, questionOrder[order].questioner, message.content, target_scores[questionOrder[order].questioner])];
+
             if (target_scores[questionOrder[order].questioner] > GOAL) { // ドボンした時
-                interaction.followUp({
-                    content: `${questionOrder[order].questioner}はドボンです！(最終得点：${target_scores[questionOrder[order].questioner]})`
-                });
+                message_list.push(`**${questionOrder[order].questioner}はドボンです！(最終得点：${target_scores[questionOrder[order].questioner]})**\n`);
                 target_list.splice(target_list.indexOf(questionOrder[order].questioner), 1);
             } else if (target_scores[questionOrder[order].questioner] === GOAL) { // ピッタリだった時！
-                interaction.followUp({
-                    content: `${questionOrder[order].questioner}はなんとピッタリです！(最終得点：${target_scores[questionOrder[order].questioner]})`
-                });
+                message_list.push(`**${questionOrder[order].questioner}はなんとピッタリです！(最終得点：${target_scores[questionOrder[order].questioner]})**\n`);
                 target_list.splice(target_list.indexOf(questionOrder[order].questioner), 1);
             }
             
-            if (target_list.length === 0) { // 最後の一人がstopした時
-                result(interaction, client, target_scores);
+            if (target_list.length === 0) { // 最後の一人がドボンorピッタリの時
+                message_list.push(format(game_message, questionOrder[order].questioner, questionOrder[order].responder));
+                responce_game.then(msg => {
+                    msg.edit({ 
+                        content : message_list.join(``),
+                        embeds : [scores]
+                    });
+                });
+                result(interaction);
+                interaction.client.off("messageCreate", message_func); // メイン処理を停止
             } else if (order < target_list.length-1) { // まだ順番が回っていない人がいる時
                 order++;
-                interaction.followUp({
-                    content: `${questionOrder[order].questioner}は${questionOrder[order].responder}に質問してください！\n質問者は質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！\n`
-                });
             } else { // 順番が最後まで到達した時
                 questionOrder = question_order_list_generator(target_list);
                 order = 0;
-                interaction.followUp({
-                    content: `${questionOrder[order].questioner}は${questionOrder[order].responder}に質問してください！\n質問者は質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！`
-                });
             }
+
+            message_list.push(format(game_message, questionOrder[order].questioner, questionOrder[order].responder));
+            responce_game.then(msg => {
+                msg.edit({ 
+                    content : message_list.join(``),
+                    embeds : [scores]
+                });
+            });
         } else if (message.content === 'stop') { // 回答者が回答から離脱(stop)した時
+            let message_list = [`---------------------\n[Spoppo ゲーム中]\n`, `\n**ここで${questionOrder[order].questioner}のカウントストップ！(最終得点：${target_scores[questionOrder[order].questioner]})**\n`];
+            scores = update_scoreboard();
             target_list.splice(target_list.indexOf(questionOrder[order].questioner), 1);
-            await message.channel.send(`ここで${questionOrder[order].questioner}のカウントストップ！(最終得点：${target_scores[questionOrder[order].questioner]})`);
+
             if (target_list.length === 0) { // 最後の一人がstopした時
-                result(interaction, client, target_scores);
-                return client.destroy();
+                message_list.push(format(game_message, questionOrder[order].questioner, questionOrder[order].responder));
+                responce_game.then(msg => {
+                    msg.edit({ 
+                        content : message_list.join(``),
+                        embeds : [scores]
+                    });
+                });
+                result(interaction);
+                interaction.client.off("messageCreate", message_func); // メイン処理を停止
             } else if (order < target_list.length-1) { // まだ順番が回っていない人がいる時
                 order++;
-                interaction.followUp({
-                    content: `${questionOrder[order].questioner}は${questionOrder[order].responder}に質問してください！\n質問者は質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！`
-                });
             } else { // 順番が最後まで到達した時
                 questionOrder = question_order_list_generator(target_list);
                 order = 0;
-                interaction.followUp({
-                    content: `${questionOrder[order].questioner}は${questionOrder[order].responder}に質問してください！\n質問者は質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！`
-                });
             }
+
+            message_list.push(format(game_message, questionOrder[order].questioner, questionOrder[order].responder));
+            responce_game.then(msg => {
+                msg.edit({ 
+                    content : message_list.join(``),
+                    embeds : [scores]
+                });
+            });
         }
-    });
+    };
 }
 
 
@@ -145,19 +198,22 @@ module.exports = {
             .setRequired(true)
         ),
 
-    async execute(interaction, client) {
+    async execute(interaction) {
         // 参加者を募集する ------------------------------------------------------------------------
-        const target_list = []; // 一人でテスト時は"Tanaka Kumi", "Kato Ken"を予め入力
-        const target_scores = {};
         GOAL = interaction.options.getInteger("ピッタリゴール");
+        target_list = []; // 参加者の名前を格納する
+        target_list_copy = []; // 質問者順の決定時に使うため、target_listのコピーを用意しておく
+        target_scores = {}; // 参加者のスコアを格納する
+        target_list.push("Tanaka Kumi"); // 一人でテスト時は"Tanaka Kumi", "Kato Ken"を予め入力
+        target_list.push("Kato Ken");
 
 		const add_button = new ButtonBuilder()
 			.setCustomId('add')
 			.setLabel('参加する')
 			.setStyle(ButtonStyle.Success);
 
-		const delete_button = new ButtonBuilder()
-			.setCustomId('cancel')
+		const withdrawal_button = new ButtonBuilder()
+			.setCustomId('withdrawal')
 			.setLabel('離脱する')
 			.setStyle(ButtonStyle.Danger);
 
@@ -171,17 +227,23 @@ module.exports = {
 			.setLabel('参加者をクリアする')
 			.setStyle(ButtonStyle.Secondary);
 
+        const cancel_button = new ButtonBuilder()
+			.setCustomId('cancel')
+			.setLabel('ゲームを中断する')
+			.setStyle(ButtonStyle.Secondary);
+
 
 		const row = new ActionRowBuilder()
-			.addComponents(add_button, delete_button, start_button, clear_button);
+			.addComponents(add_button, withdrawal_button, start_button, clear_button, cancel_button);
 
         
         // 最初の宣言の設定
+        let welcome_message = `何とピッタリゲームを始めます！\n参加する場合、以下のボタンを押してください！\n主催者は全員参加を確認次第開始してください！`;
         const response = await interaction.reply({
-            content: `何とピッタリゲームを始めます！\n参加する場合、以下のボタンを押してください！\n主催者は全員参加を確認次第開始してください！`,
+            content: welcome_message,
             components: [row],
         });
-        const collector = await response.createMessageComponentCollector({ componentType: ComponentType.Button, max: 810, time: 60_000 }); // maxはハト(810)です🐦
+        const collector = await response.createMessageComponentCollector({ componentType: ComponentType.Button, max: 810, time: 60_000 });
 
 		
         // 処理コード(イベント:collectの処理を発動する)
@@ -189,39 +251,37 @@ module.exports = {
             try {
                 if (i.customId === 'add') {
                     if (target_list.indexOf(i.user.displayName) === -1) target_list.push(i.user.displayName); // 重複チェック→既にあったら入れない
-                    await i.update({ content: `何とピッタリゲームを始めます！\n参加する場合、以下のボタンを押してください！\n主催者は全員参加を確認次第開始してください！\n\n${i.user.displayName}が参加しました(参加人数:${target_list.length})`, components: [row] });
-                } else if (i.customId === 'cancel') {
+                    await i.update({ content: welcome_message+`\n\n${i.user.displayName}が参加しました(参加人数:${target_list.length})`, components: [row] });
+                } else if (i.customId === 'withdrawal') {
                     target_list.splice(target_list.indexOf(i.user.displayName), 1); // 押した人の名前のみピンポイントで消す
-                    await i.update({ content: `何とピッタリゲームを始めます！\n参加する場合、以下のボタンを押してください！\n主催者は全員参加を確認次第開始してください！\n\n${i.user.displayName}が離脱しました(参加人数:${target_list.length})`, components: [row] });
+                    await i.update({ content: welcome_message+`\n\n${i.user.displayName}が離脱しました(参加人数:${target_list.length})`, components: [row] });
                 } else if (i.customId === 'start') {
                     if (interaction.member.displayName !== i.user.displayName) { // 主催者と押した人が一致しない
-                        await i.update({ content: `何とピッタリゲームを始めます！\n参加する場合、以下のボタンを押してください！\n主催者は全員参加を確認次第開始してください！\n\n**確認の為、主催者の方が開始ボタンを押してください！**\n\n${i.user.displayName}が離脱しました(参加人数:${target_list.length})`, components: [row] });
+                        await i.update({ content: welcome_message+`\n\n**確認の為、主催者の方が開始ボタンを押してください！**\n\n${i.user.displayName}が離脱しました(参加人数:${target_list.length})`, components: [row] });
                     } else if (target_list.length >= 2) { // ユーザーの参加人数が2人以上
                         // ゲーム本編の処理に移行する
-                        await i.update({ content: `何とピッタリゲームを始めます！\n参加する場合、以下のボタンを押してください！\n主催者は全員参加を確認次第開始してください！\n\nゲームを開始します！(参加人数:${target_list.length})`});
+                        await i.update({ content: welcome_message+`\n\nゲームを開始します！(参加人数:${target_list.length})`});
                         target_list_copy = [...target_list];
-                        for(const target of target_list) target_scores[target] = 0;
-                        game_start(interaction, client, GOAL, target_list, target_scores);
+                        for(const target_name of target_list) target_scores[target_name] = 0;
+                        game_start(interaction);
                         return;
-                    } else { // 参加者不十分
-                        await i.update({ content: `何とピッタリゲームを始めます！\n参加する場合、以下のボタンを押してください！\n主催者は全員参加を確認次第開始してください！\n\n**参加人数が足りません！(最低2人)**\n\n${i.user.displayName}が離脱しました(参加人数:${target_list.length})`, components: [row] });
+                    } else { // 参加者不十分(2人未満)の時
+                        await i.update({ content: welcome_message+`\n\n**参加人数が足りません！(最低2人)**\n\n${i.user.displayName}が離脱しました(参加人数:${target_list.length})`, components: [row] });
                     }
                 } else if (i.customId === 'clear') {
                     target_list.splice(0); // 要素を全削除
-                    await i.update({ content: `何とピッタリゲームを始めます！\n参加する場合、以下のボタンを押してください！\n主催者は全員参加を確認次第開始してください！\n\n参加者を一旦クリアします！(参加人数:${target_list.length})`, components: [row] });
+                    await i.update({ content: welcome_message+`\n\n参加者を一旦クリアします！(参加人数:${target_list.length})`, components: [row] });
+                } else if (i.customId === 'cancel') {
+                    if (interaction.member.displayName !== i.user.displayName) { // 主催者と押した人が一致しない
+                        await i.update({ content: welcome_message+`\n\n**確認の為、主催者の方が中断ボタンを押してください！**\n\n${i.user.displayName}が離脱しました(参加人数:${target_list.length})`, components: [row] });
+                    } else {
+                        await i.update({ content: `何とピッタリゲームを中断しました...\n再開したい場合はもう一度コマンドを実行し直してください`, embeds: [] });
+                        return;
+                    }
                 }
             } catch (e) {
                 await i.update({ content: e });
             }
         });
-
-        // 数値が入力された時の挙動
-        // 数値の型判定：https://qiita.com/taku-0728/items/329e0bee1c49b7ce7cd1
-        // 
-        // client.on('messageCreate', async message => {
-        //     if (isFinite(message.content) && target_scores.length !== 0) {
-        //         await message.channel.send(`${message.content} が送信されました`);
-        //     }
-        // });
     },
 };
