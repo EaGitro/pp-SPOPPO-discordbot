@@ -1,7 +1,7 @@
 // ライブラリ　インポート
+const { REST, Routes } = require('discord.js');
 const fs = require('node:fs');
 const path = require('node:path');
-const { REST, Routes } = require('discord.js');
 require('dotenv').config();
 
 // 接続情報(dotenvによるよru.envファイルからの読み込み)
@@ -9,7 +9,6 @@ const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.DISCORD_CLIENTID;
 const guildId = process.env.DISCORD_GUILDID;
 // const { clientId, guildId, token } = require('./config.json');
-console.log(token);
 
 // スラッシュコマンド読み込み
 const commands = [];
