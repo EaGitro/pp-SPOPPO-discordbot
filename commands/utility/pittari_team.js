@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ComponentType, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ComponentType, EmbedBuilder, GuildTextThreadManager } = require('discord.js');
 let target_list = []; // 参加者の名前を格納する
 let target_list_copy = []; // 質問者順の決定時に使うため、target_listのコピーを用意しておく
 let target_scores = {}; // 参加者のスコアを格納する
@@ -197,8 +197,8 @@ function game_start(interaction) {
 // Bot全体のスラッシュコマンド処理コード ------------------------------------------------------------------------
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('pittari')
-        .setDescription('何とピッタリゲームを始める🐦')
+        .setName('pittari_team')
+        .setDescription('何とピッタリゲーム(チーム戦)を始める🐦')
         .addIntegerOption(option => option
             .setName('ピッタリゴール')
             .setDescription('ピッタリを目指す数値')
@@ -208,15 +208,22 @@ module.exports = {
     async execute(interaction) {
         // 参加者を募集する ------------------------------------------------------------------------
         GOAL = interaction.options.getInteger("ピッタリゴール");
-        target_list = []; // 参加者の名前を格納する
-        target_list_copy = []; // 質問者順の決定時に使うため、target_listのコピーを用意しておく
-        target_scores = {}; // 参加者のスコアを格納する
-        target_list.push("Tanaka Kumi"); // 一人でテスト時は"Tanaka Kumi", "Kato Ken"を予め入力
-        target_list.push("Kato Ken");
+        team_A_list = []; // Aチーム参加者の名前を格納する
+        team_B_list = [];
+        team_A_list_copy = []; // 質問者順の決定時に使うため、team_listのコピーを用意しておく
+        team_B_list_copy = [];
+        team_scores = {}; // チームのスコアを格納する
+        target_A_list.push("Tanaka Kumi"); // 一人でテスト時は"Tanaka Kumi", "Kato Ken"を予め入力
+        target_B_list.push("Kato Ken");
 
-		const add_button = new ButtonBuilder()
-			.setCustomId('add')
-			.setLabel('参加する')
+        const addA_button = new ButtonBuilder()
+			.setCustomId('addA')
+			.setLabel('Aチーム')
+			.setStyle(ButtonStyle.Success);
+
+        const addB_button = new ButtonBuilder()
+			.setCustomId('addB')
+			.setLabel('Bチーム')
 			.setStyle(ButtonStyle.Success);
 
 		const withdrawal_button = new ButtonBuilder()
@@ -240,9 +247,8 @@ module.exports = {
 			.setStyle(ButtonStyle.Secondary);
 
 
-		const row = new ActionRowBuilder()
-			.addComponents(add_button, withdrawal_button, start_button, clear_button, cancel_button);
-
+        const row = new ActionRowBuilder()
+			.addComponents(addA_button, addB_button, withdrawal_button, start_button, clear_button, cancel_button);
         
         // 最初の宣言の設定
         let welcome_message = `何とピッタリゲームを始めます！\n参加する場合、以下のボタンを押してください！\n主催者は全員参加を確認次第開始してください！`;
@@ -256,9 +262,12 @@ module.exports = {
         // 処理コード(イベント:collectの処理を発動する)
         collector.on('collect', async i => {
             try {
-                if (i.customId === 'add') {
+                if (i.customId === 'addA') {
                     if (target_list.indexOf(i.user.displayName) === -1) target_list.push(i.user.displayName); // 重複チェック→既にあったら入れない
                     await i.update({ content: welcome_message+`\n\n${i.user.displayName}が参加しました(参加人数:${target_list.length})`, components: [row] });
+                } else if (i.customId === 'addB') {
+                    if (target_list.indexOf(i.user.displayName) !== -1) target_list.splice(target_list.indexOf(i.user.displayName), 1); // 押した人の名前のみピンポイントで消す
+                    await i.update({ content: welcome_message+`\n\n${i.user.displayName}が離脱しました(参加人数:${target_list.length})`, components: [row] });
                 } else if (i.customId === 'withdrawal') {
                     if (target_list.indexOf(i.user.displayName) !== -1) target_list.splice(target_list.indexOf(i.user.displayName), 1); // 押した人の名前のみピンポイントで消す
                     await i.update({ content: welcome_message+`\n\n${i.user.displayName}が離脱しました(参加人数:${target_list.length})`, components: [row] });
