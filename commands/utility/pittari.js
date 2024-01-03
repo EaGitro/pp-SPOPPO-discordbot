@@ -103,13 +103,14 @@ function update_scoreboard() {
 // 課題：みんなの得点の表示(embed?)
 function game_start(interaction) {
     let questionOrder = question_order_list_generator(target_list); // 質問順を格納
+    let respondentOrder = question_order_list_generator(target_list_copy); // 回答順を格納
     let order = 0; // 次に参照する質問順のインデックス
     let game_message = `\n[ターン]{0}は{1}に質問してください！\n質問者は質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！\n`;
     let point_message = `\n{0}は{1}ポイント獲得！(現在の得点：{2})\n`
     let scores = update_scoreboard();
     
     const responce_game = interaction.channel.send({
-        content: `---------------------\n[Spoppo ゲーム中]` + format(game_message, questionOrder[order].questioner, questionOrder[order].responder),
+        content: `---------------------\n[Spoppo ゲーム中]` + format(game_message, questionOrder[order].questioner, respondentOrder[order].responder),
         embeds : [scores]
     });
 
