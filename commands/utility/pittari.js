@@ -66,23 +66,29 @@ function question_order_list_generator(target_list) {
 
 // 結果発表の処理
 // 課題：順位の表示、ランキング順に表示
-function result(interaction) {
-    let safe_list = []; // セーフの人達
-    let dobon_list = []; // ドボンの人達
-    for (let key in target_scores) {
-        if (target_scores[key] <= GOAL) { // ゴール値以下
-            safe_list.push(`${key}：${target_scores[key]}`);
-        } else { // ゴール値より大きい(ドボン)
-            dobon_list.push(`${key}：${target_scores[key]}`);
-        }
-    }
+/**
+ * 旧 result() 関数
+ */
+// function result(interaction) {
+//     let safe_list = []; // セーフの人達
+//     let dobon_list = []; // ドボンの人達
+//     for (let key in target_scores) {
+//         if (target_scores[key] <= GOAL) { // ゴール値以下
+//             safe_list.push(`${key}：${target_scores[key]}`);
+//         } else { // ゴール値より大きい(ドボン)
+//             dobon_list.push(`${key}：${target_scores[key]}`);
+//         }
+//     }
     
-    interaction.followUp({
-        content: `ゲーム終了！\n結果発表！！！\n\nピッタリランキング：\n${safe_list.join('\n')}\n\nドボンランキング：\n${dobon_list.join('\n')}\n\nお疲れ様でした🐦`
-    });
+//     interaction.followUp({
+//         content: `ゲーム終了！\n結果発表！！！\n\nピッタリランキング：\n${safe_list.join('\n')}\n\nドボンランキング：\n${dobon_list.join('\n')}\n\nお疲れ様でした🐦`
+//     });
 
-    return;
-}
+//     return;
+// }
+
+const result_func = require("../funcs/result_func")
+const result = result_func.result_func;
 
 // スコアボードの更新関数
 function update_scoreboard() {
@@ -137,7 +143,7 @@ function game_start(interaction) {
                         embeds : [scores]
                     });
                 });
-                result(interaction);
+                result(interaction, target_scores, GOAL);
                 interaction.client.off("messageCreate", message_func); // メイン処理を停止
             } else if (order < target_list.length-1) { // まだ順番が回っていない人がいる時
                 order++;
@@ -166,7 +172,7 @@ function game_start(interaction) {
                         embeds : [scores]
                     });
                 });
-                result(interaction);
+                result(interaction, target_scores, GOAL);
                 interaction.client.off("messageCreate", message_func); // メイン処理を停止
             } else if (order < target_list.length-1) { // まだ順番が回っていない人がいる時
                 order++;
