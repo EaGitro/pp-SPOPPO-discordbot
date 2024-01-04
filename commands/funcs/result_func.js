@@ -6,7 +6,6 @@
  * @returns 
  */
 function nearIndex(arr, target) {
-    console.log("nearIndex")
     if (arr.length == 0) {
         return 0
     } else {

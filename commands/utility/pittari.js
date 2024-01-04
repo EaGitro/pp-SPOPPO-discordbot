@@ -281,7 +281,7 @@ module.exports = {
                     if (interaction.member.displayName !== i.user.displayName) { // 主催者と押した人が一致しない
                         await i.update({ content: welcome_message+`\n\n**確認の為、主催者の方が中断ボタンを押してください！**\n\n${i.user.displayName}が離脱しました(参加人数:${target_list.length})`, components: [row] });
                     } else {
-                        await i.update({ content: `何とピッタリゲームを中断しました...\n再開したい場合はもう一度コマンドを実行し直してください`, embeds: [] });
+                        await i.update({ content: `何とピッタリゲームを中断しました...\n再開したい場合はもう一度コマンドを実行し直してください`, components: [] });
                         return;
                     }
                 }
