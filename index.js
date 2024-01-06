@@ -3,17 +3,37 @@ const fs = require('node:fs');
 const path = require('node:path');
 require('dotenv').config();
 
+/**
+ * デプロイのためのコマンド類
+ */
+const port = process.env.PORT || 3000;
+const host = ("RENDER" in process.env) ? `0.0.0.0` : `localhost`;
+
+// fastifyによる高速なlisten
+const fastify = require('fastify')({
+    logger: true
+});
+
+fastify.listen({ host: host, port: port }, function (err, address) {
+    if (err) {
+        fastify.log.error(err);
+        process.exit(1);
+    }
+})
+
+
+
 // Require the necessary discord.js classes
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 const token = process.env.DISCORD_TOKEN; // const { token } = require('./config.json');
 
 // Create a new client instance
 const client = new Client({
-	intents: [
-		GatewayIntentBits.Guilds,
+    intents: [
+        GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-		GatewayIntentBits.MessageContent,
-	],
+        GatewayIntentBits.MessageContent,
+    ],
 });
 
 // コマンドファイルの読み込み
