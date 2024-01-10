@@ -46,18 +46,42 @@ const result = function (interaction, target_scores, GOAL) {
     let pittariRanking = 1; // 何位かを表す
     let dobonRanking = 1;
 
-    for(let nameAndScore of safe_list){
+
+    /**
+     * カスタムスタンプのための定数
+     */
+
+    const igyoEmoji = "<:igyo:1097381858938994748>"
+    const piedpiperEmoji = "<:piedpiper:1157296844880232458>"
+    const saikidou__Emoji = "<:__:1165144029969797120>"
+    const yosanoakikoEmoji = "<:yosanoakiko:1157338685742796881>"
+
+
+    for (let nameAndScore of safe_list) {
         // 順位の文字列について: ${何位か} 位  ${名前：スコア}  ${もしピッタリならPPマーク} ${もし1位なら偉業} ${3位以上なら王冠} 
-        pittariRankingStr += `${pittariRanking} 位  ${nameAndScore} ${pittariRanking==1?":first_place:":""} ${pittariRanking==2?":second_place:":""} ${pittariRanking==3?":third_place:":""}\n`
-        pittariRanking ++;
+        pittariRankingStr += `${pittariRanking} 位  ${nameAndScore}  ${safe_list_only_score[pittariRanking - 1] == GOAL ? piedpiperEmoji : ""} ${pittariRanking == 1 ? igyoEmoji : ""} ${pittariRanking <= 3 ? ":crown:" : ""}\n`
+        /**
+         * カスタムスタンプが使えないために ARAN による応急処置
+         */
+        // pittariRankingStr += `${pittariRanking} 位  ${nameAndScore} ${pittariRanking==1?":first_place:":""} ${pittariRanking==2?":second_place:":""} ${pittariRanking==3?":third_place:":""}\n`
+        pittariRanking++;
     }
 
-    for(let nameAndScore of dobon_list){
-        dobonRankingStr += `${dobonRanking} 位  ${nameAndScore}  ${dobonRanking==1?":skull_crossbones:":":skull:"}\n`
-        dobonRanking ++;
+    for (let nameAndScore of dobon_list) {
+
+        /**
+         * カスタムスタンプが使えないために ARAN による応急処置
+         */
+        // dobonRankingStr += `${dobonRanking} 位  ${nameAndScore}  ${dobonRanking==1?":skull_crossbones:":":skull:"}\n`
+        
+        /**
+         * 正常版
+         */
+        dobonRankingStr += `${dobonRanking} 位  ${nameAndScore}  ${dobonRanking == 1 ? saikidou__Emoji : yosanoakikoEmoji}\n`
+        dobonRanking++;
     }
 
-    
+
 
     interaction.followUp({
         content: `ゲーム終了！\n結果発表！！！\n\nピッタリランキング：\n${pittariRankingStr}\n\nドボンランキング：\n${dobonRankingStr}\n\nお疲れ様でした🐦`
