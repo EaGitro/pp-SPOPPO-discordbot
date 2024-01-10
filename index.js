@@ -21,6 +21,29 @@ fastify.listen({ host: host, port: port }, function (err, address) {
     }
 })
 
+// ヘルスチェック用のpingコマンド(サーバー落ち対策)
+// UptimeRobot: https://uptimerobot.com
+/**
+ * UptimeRobot
+ * new monitor を HTTPメソッドに設定
+ * エンドポイントは [https://pp-spoppo-discordbot.onrender.com/ping](https://pp-spoppo-discordbot.onrender.com/ping)
+ */
+fastify.get('/ping', function (request, reply) {
+    // console.log(`Ping! Ping! Ping!`);
+    reply.type('text/html').send(`
+        <!DOCTYPE html>
+        <html lang="ja">
+            <head>
+                <title>Document</title>
+            </head>
+            <body>
+                <p>Ping!</p>
+            </body>
+        </html>
+    `);
+});
+
+
 
 
 // Require the necessary discord.js classes
