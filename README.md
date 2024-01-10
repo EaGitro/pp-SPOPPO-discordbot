@@ -33,7 +33,6 @@ DISCORD_GUILDID=[自分のguildId]
 具体的には以下画像の赤枠の箇所を許可にする。
 ![image](privileged_gateway_intents.png)
 
-5. ターミナルにて`npm install`を実行する
 
 6. botを起動する
 以下コードをvscodeのターミナルで実行し、動いているかどうか実際にdiscordでコマンドを打ち込んで確認してみるべし
