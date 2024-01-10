@@ -210,8 +210,8 @@ module.exports = {
         target_list = []; // 参加者の名前を格納する
         target_list_copy = []; // 質問者順の決定時に使うため、target_listのコピーを用意しておく
         target_scores = {}; // 参加者のスコアを格納する
-        target_list.push("Tanaka Kumi"); // 一人でテスト時は"Tanaka Kumi", "Kato Ken"を予め入力
-        target_list.push("Kato Ken");
+        // target_list.push("Tanaka Kumi"); // 一人でテスト時は"Tanaka Kumi", "Kato Ken"を予め入力
+        // target_list.push("Kato Ken");
 
 		const add_button = new ButtonBuilder()
 			.setCustomId('add')
