@@ -48,12 +48,12 @@ const result = function (interaction, target_scores, GOAL) {
 
     for(let nameAndScore of safe_list){
         // 順位の文字列について: ${何位か} 位  ${名前：スコア}  ${もしピッタリならPPマーク} ${もし1位なら偉業} ${3位以上なら王冠} 
-        pittariRankingStr += `${pittariRanking} 位  ${nameAndScore}  ${safe_list_only_score[pittariRanking-1]==GOAL?":piedpiper:":""} ${pittariRanking==1?":igyo:":""} ${pittariRanking<=3?":crown:":""}\n`
+        pittariRankingStr += `${pittariRanking} 位  ${nameAndScore} ${pittariRanking==1?":first_place:":""} ${pittariRanking==2?":second_place:":""} ${pittariRanking==3?":third_place:":""}\n`
         pittariRanking ++;
     }
 
     for(let nameAndScore of dobon_list){
-        dobonRankingStr += `${dobonRanking} 位  ${nameAndScore}  ${dobonRanking==1?":__~1:":":yosanoakiko:"}\n`
+        dobonRankingStr += `${dobonRanking} 位  ${nameAndScore}  ${dobonRanking==1?":skull_crossbones:":":skull:"}\n`
         dobonRanking ++;
     }
 
