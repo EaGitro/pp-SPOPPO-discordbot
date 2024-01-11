@@ -117,19 +117,36 @@ function game_start(interaction) {
     interaction.client.on('messageCreate', message_func);
     async function message_func(message) {
         if (isFinite(message.content)) { // 回答者が数値を入力した時に発火  && message.member.displayName === questionOrder[order].questioner
-            target_scores[questionOrder[order].questioner] += Number(message.content);
-            scores = update_scoreboard();
-            let message_list = [`---------------------\n[Spoppo ゲーム中]\n`, format(point_message, questionOrder[order].questioner, message.content, target_scores[questionOrder[order].questioner])];
+            if( message.member.displayName === questionOrder[order].questioner){
+                target_scores[questionOrder[order].questioner] += Number(message.content);
+                scores = update_scoreboard();
+                let message_list = [`---------------------\n[Spoppo ゲーム中]\n`, format(point_message, questionOrder[order].questioner, message.content, target_scores[questionOrder[order].questioner])];
 
-            if (target_scores[questionOrder[order].questioner] > GOAL) { // ドボンした時
-                message_list.push(`**${questionOrder[order].questioner}はドボンです！(最終得点：${target_scores[questionOrder[order].questioner]})**\n`);
-                target_list.splice(target_list.indexOf(questionOrder[order].questioner), 1);
-            } else if (target_scores[questionOrder[order].questioner] === GOAL) { // ピッタリだった時！
-                message_list.push(`**${questionOrder[order].questioner}はなんとピッタリです！(最終得点：${target_scores[questionOrder[order].questioner]})**\n`);
-                target_list.splice(target_list.indexOf(questionOrder[order].questioner), 1);
-            }
-            
-            if (target_list.length === 0) { // 最後の一人がドボンorピッタリの時
+                if (target_scores[questionOrder[order].questioner] > GOAL) { // ドボンした時
+                    message_list.push(`**${questionOrder[order].questioner}はドボンです！(最終得点：${target_scores[questionOrder[order].questioner]})**\n`);
+                    target_list.splice(target_list.indexOf(questionOrder[order].questioner), 1);
+                } else if (target_scores[questionOrder[order].questioner] === GOAL) { // ピッタリだった時！
+                    message_list.push(`**${questionOrder[order].questioner}はなんとピッタリです！(最終得点：${target_scores[questionOrder[order].questioner]})**\n`);
+                    target_list.splice(target_list.indexOf(questionOrder[order].questioner), 1);
+                }
+                
+                if (target_list.length === 0) { // 最後の一人がドボンorピッタリの時
+                    message_list.push(format(game_message, questionOrder[order].questioner, questionOrder[order].responder));
+                    responce_game.then(msg => {
+                        msg.edit({
+                            content : message_list.join(``),
+                            embeds : [scores]
+                        });
+                    });
+                    result(interaction);
+                    interaction.client.off("messageCreate", message_func); // メイン処理を停止
+                } else if (order < target_list.length-1) { // まだ順番が回っていない人がいる時
+                    order++;
+                } else { // 順番が最後まで到達した時
+                    questionOrder = question_order_list_generator(target_list);
+                    order = 0;
+                }
+
                 message_list.push(format(game_message, questionOrder[order].questioner, questionOrder[order].responder));
                 responce_game.then(msg => {
                     msg.edit({ 
@@ -137,22 +154,7 @@ function game_start(interaction) {
                         embeds : [scores]
                     });
                 });
-                result(interaction);
-                interaction.client.off("messageCreate", message_func); // メイン処理を停止
-            } else if (order < target_list.length-1) { // まだ順番が回っていない人がいる時
-                order++;
-            } else { // 順番が最後まで到達した時
-                questionOrder = question_order_list_generator(target_list);
-                order = 0;
-            }
-
-            message_list.push(format(game_message, questionOrder[order].questioner, questionOrder[order].responder));
-            responce_game.then(msg => {
-                msg.edit({ 
-                    content : message_list.join(``),
-                    embeds : [scores]
-                });
-            });
+        }
         } else if (message.content === 'stop') { // 回答者が回答から離脱(stop)した時
             let message_list = [`---------------------\n[Spoppo ゲーム中]\n`, `\n**ここで${questionOrder[order].questioner}のカウントストップ！(最終得点：${target_scores[questionOrder[order].questioner]})**\n`];
             scores = update_scoreboard();
