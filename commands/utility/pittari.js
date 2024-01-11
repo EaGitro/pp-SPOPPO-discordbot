@@ -66,23 +66,29 @@ function question_order_list_generator(target_list) {
 
 // 結果発表の処理
 // 課題：順位の表示、ランキング順に表示
-function result(interaction) {
-    let safe_list = []; // セーフの人達
-    let dobon_list = []; // ドボンの人達
-    for (let key in target_scores) {
-        if (target_scores[key] <= GOAL) { // ゴール値以下
-            safe_list.push(`${key}：${target_scores[key]}`);
-        } else { // ゴール値より大きい(ドボン)
-            dobon_list.push(`${key}：${target_scores[key]}`);
-        }
-    }
+/**
+ * 旧 result() 関数
+ */
+// function result(interaction) {
+//     let safe_list = []; // セーフの人達
+//     let dobon_list = []; // ドボンの人達
+//     for (let key in target_scores) {
+//         if (target_scores[key] <= GOAL) { // ゴール値以下
+//             safe_list.push(`${key}：${target_scores[key]}`);
+//         } else { // ゴール値より大きい(ドボン)
+//             dobon_list.push(`${key}：${target_scores[key]}`);
+//         }
+//     }
     
-    interaction.followUp({
-        content: `ゲーム終了！\n結果発表！！！\n\nピッタリランキング：\n${safe_list.join('\n')}\n\nドボンランキング：\n${dobon_list.join('\n')}\n\nお疲れ様でした🐦`
-    });
+//     interaction.followUp({
+//         content: `ゲーム終了！\n結果発表！！！\n\nピッタリランキング：\n${safe_list.join('\n')}\n\nドボンランキング：\n${dobon_list.join('\n')}\n\nお疲れ様でした🐦`
+//     });
 
-    return;
-}
+//     return;
+// }
+
+const result_func = require("../funcs/result_func")
+const result = result_func.result_func;
 
 // スコアボードの更新関数
 function update_scoreboard() {
@@ -103,37 +109,37 @@ function update_scoreboard() {
 // 課題：みんなの得点の表示(embed?)
 function game_start(interaction) {
     let questionOrder = question_order_list_generator(target_list); // 質問順を格納
-    let order = 0; // 次に参照する質問順のインデックス
+    let order = questionOrder.shift(); // 次に参照する質問順のインデックス
     let game_message = `\n[ターン]{0}は{1}に質問してください！\n質問者は質問の回答を半角数字で送信してください！\n回答をストップする場合は「stop」を送信してください！\n`;
     let point_message = `\n{0}は{1}ポイント獲得！(現在の得点：{2})\n`
     let scores = update_scoreboard();
     
     const responce_game = interaction.channel.send({
-        content: `---------------------\n[Spoppo ゲーム中]` + format(game_message, questionOrder[order].questioner, questionOrder[order].responder),
+        content: `---------------------\n[Spoppo ゲーム中]` + format(game_message, order.questioner, order.responder),
         embeds : [scores]
     });
 
     // メイン処理を開始
     interaction.client.on('messageCreate', message_func);
     async function message_func(message) {
-        if (isFinite(message.content)) { // 回答者が数値を入力した時に発火  && message.member.displayName === questionOrder[order].questioner
-            if( message.member.displayName === questionOrder[order].questioner){
-                target_scores[questionOrder[order].questioner] += Number(message.content);
+       // 回答者が数値を入力した時に発火  && message.member.displayName === order.questioner
+            if(isFinite(message.content) && message.author.displayName === order.questioner){
+                target_scores[order.questioner] += Number(message.content);
                 scores = update_scoreboard();
-                let message_list = [`---------------------\n[Spoppo ゲーム中]\n`, format(point_message, questionOrder[order].questioner, message.content, target_scores[questionOrder[order].questioner])];
+                let message_list = [`---------------------\n[Spoppo ゲーム中]\n`, format(point_message, order.questioner, message.content, target_scores[order.questioner])];
 
-                if (target_scores[questionOrder[order].questioner] > GOAL) { // ドボンした時
-                    message_list.push(`**${questionOrder[order].questioner}はドボンです！(最終得点：${target_scores[questionOrder[order].questioner]})**\n`);
-                    target_list.splice(target_list.indexOf(questionOrder[order].questioner), 1);
-                } else if (target_scores[questionOrder[order].questioner] === GOAL) { // ピッタリだった時！
-                    message_list.push(`**${questionOrder[order].questioner}はなんとピッタリです！(最終得点：${target_scores[questionOrder[order].questioner]})**\n`);
-                    target_list.splice(target_list.indexOf(questionOrder[order].questioner), 1);
+                if (target_scores[order.questioner] > GOAL) { // ドボンした時
+                    message_list.push(`**${order.questioner}はドボンです！(最終得点：${target_scores[order.questioner]})**\n`);
+                    target_list.splice(target_list.indexOf(order.questioner), 1);
+                } else if (target_scores[order.questioner] === GOAL) { // ピッタリだった時！
+                    message_list.push(`**${order.questioner}はなんとピッタリです！(最終得点：${target_scores[order.questioner]})**\n`);
+                    target_list.splice(target_list.indexOf(order.questioner), 1);
                 }
                 
                 if (target_list.length === 0) { // 最後の一人がドボンorピッタリの時
-                    message_list.push(format(game_message, questionOrder[order].questioner, questionOrder[order].responder));
+                    message_list.push(format(game_message, order.questioner, questionOrder[order].responder));
                     responce_game.then(msg => {
-                        msg.edit({
+                        msg.edit({ 
                             content : message_list.join(``),
                             embeds : [scores]
                         });
@@ -147,37 +153,37 @@ function game_start(interaction) {
                     order = 0;
                 }
 
-                message_list.push(format(game_message, questionOrder[order].questioner, questionOrder[order].responder));
+                message_list.push(format(game_message, order.questioner, questionOrder[order].responder));
                 responce_game.then(msg => {
                     msg.edit({ 
                         content : message_list.join(``),
                         embeds : [scores]
                     });
                 });
-        }
+            
         } else if (message.content === 'stop') { // 回答者が回答から離脱(stop)した時
-            let message_list = [`---------------------\n[Spoppo ゲーム中]\n`, `\n**ここで${questionOrder[order].questioner}のカウントストップ！(最終得点：${target_scores[questionOrder[order].questioner]})**\n`];
+            let message_list = [`---------------------\n[Spoppo ゲーム中]\n`, `\n**ここで${order.questioner}のカウントストップ！(最終得点：${target_scores[order.questioner]})**\n`];
             scores = update_scoreboard();
-            target_list.splice(target_list.indexOf(questionOrder[order].questioner), 1);
+            target_list.splice(target_list.indexOf(order.questioner), 1);
 
             if (target_list.length === 0) { // 最後の一人がstopした時
-                message_list.push(format(game_message, questionOrder[order].questioner, questionOrder[order].responder));
+                message_list.push(format(game_message, order.questioner, order.responder));
                 responce_game.then(msg => {
                     msg.edit({ 
                         content : message_list.join(``),
                         embeds : [scores]
                     });
                 });
-                result(interaction);
+                result(interaction, target_scores, GOAL);
                 interaction.client.off("messageCreate", message_func); // メイン処理を停止
-            } else if (order < target_list.length-1) { // まだ順番が回っていない人がいる時
-                order++;
+            } else if (questionOrder.length !== 0) { // まだ順番が回っていない人がいる時
+                order = questionOrder.shift();
             } else { // 順番が最後まで到達した時
                 questionOrder = question_order_list_generator(target_list);
-                order = 0;
+                order = questionOrder.shift();
             }
 
-            message_list.push(format(game_message, questionOrder[order].questioner, questionOrder[order].responder));
+            message_list.push(format(game_message, order.questioner, order.responder));
             responce_game.then(msg => {
                 msg.edit({ 
                     content : message_list.join(``),
@@ -206,8 +212,8 @@ module.exports = {
         target_list = []; // 参加者の名前を格納する
         target_list_copy = []; // 質問者順の決定時に使うため、target_listのコピーを用意しておく
         target_scores = {}; // 参加者のスコアを格納する
-        target_list.push("Tanaka Kumi"); // 一人でテスト時は"Tanaka Kumi", "Kato Ken"を予め入力
-        target_list.push("Kato Ken");
+        // target_list.push("Tanaka Kumi"); // 一人でテスト時は"Tanaka Kumi", "Kato Ken"を予め入力
+        // target_list.push("Kato Ken");
 
 		const add_button = new ButtonBuilder()
 			.setCustomId('add')
@@ -258,26 +264,26 @@ module.exports = {
                     target_list.splice(target_list.indexOf(i.user.displayName), 1); // 押した人の名前のみピンポイントで消す
                     await i.update({ content: welcome_message+`\n\n${i.user.displayName}が離脱しました(参加人数:${target_list.length})`, components: [row] });
                 } else if (i.customId === 'start') {
-                    if (interaction.member.displayName !== i.user.displayName) { // 主催者と押した人が一致しない
-                        await i.update({ content: welcome_message+`\n\n**確認の為、主催者の方が開始ボタンを押してください！**\n\n${i.user.displayName}が離脱しました(参加人数:${target_list.length})`, components: [row] });
+                    if (interaction.user.id !== i.user.id) { // 主催者と押した人が一致しない
+                        await i.update({ content: welcome_message+`\n\n**確認の為、主催者の方が開始ボタンを押してください！**\n\n(参加人数:${target_list.length})`, components: [row] });
                     } else if (target_list.length >= 2) { // ユーザーの参加人数が2人以上
                         // ゲーム本編の処理に移行する
-                        await i.update({ content: welcome_message+`\n\nゲームを開始します！(参加人数:${target_list.length})`});
+                        await i.update({ content: welcome_message+`\n\nゲームを開始します！(参加人数:${target_list.length})`, components: []});
                         target_list_copy = [...target_list];
                         for(const target_name of target_list) target_scores[target_name] = 0;
                         game_start(interaction);
                         return;
                     } else { // 参加者不十分(2人未満)の時
-                        await i.update({ content: welcome_message+`\n\n**参加人数が足りません！(最低2人)**\n\n${i.user.displayName}が離脱しました(参加人数:${target_list.length})`, components: [row] });
+                        await i.update({ content: welcome_message+`\n\n**参加人数が足りません！(最低2人)**\n\n(参加人数:${target_list.length})`, components: [row] });
                     }
                 } else if (i.customId === 'clear') {
                     target_list.splice(0); // 要素を全削除
                     await i.update({ content: welcome_message+`\n\n参加者を一旦クリアします！(参加人数:${target_list.length})`, components: [row] });
                 } else if (i.customId === 'cancel') {
-                    if (interaction.member.displayName !== i.user.displayName) { // 主催者と押した人が一致しない
-                        await i.update({ content: welcome_message+`\n\n**確認の為、主催者の方が中断ボタンを押してください！**\n\n${i.user.displayName}が離脱しました(参加人数:${target_list.length})`, components: [row] });
+                    if (interaction.user.id !== i.user.id) { // 主催者と押した人が一致しない
+                        await i.update({ content: welcome_message+`\n\n**確認の為、主催者の方が中断ボタンを押してください！**\n\n(参加人数:${target_list.length})`, components: [row] });
                     } else {
-                        await i.update({ content: `何とピッタリゲームを中断しました...\n再開したい場合はもう一度コマンドを実行し直してください`, embeds: [] });
+                        await i.update({ content: `何とピッタリゲームを中断しました...\n再開したい場合はもう一度コマンドを実行し直してください`, components: [] });
                         return;
                     }
                 }
